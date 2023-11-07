@@ -7,8 +7,7 @@ class SOMatrixBase(_base.SOMatrixBase):
     """Implementation of methods common to SO(N) matrix lie groups using Numpy"""
 
     def dot(self, other):
-        """Multiply another rotation or one or more vectors on the left.
-        """
+        """Multiply another rotation or one or more vectors on the left."""
         if isinstance(other, self.__class__):
             # Compound with another rotation
             return self.__class__(np.dot(self.mat, other.mat))
@@ -20,7 +19,8 @@ class SOMatrixBase(_base.SOMatrixBase):
                 return np.squeeze(np.dot(self.mat, other.T).T)
             else:
                 raise ValueError(
-                    "Vector must have shape ({},) or (N,{})".format(self.dim, self.dim))
+                    "Vector must have shape ({},) or (N,{})".format(self.dim, self.dim)
+                )
 
     @classmethod
     def identity(cls):
@@ -50,16 +50,19 @@ class SOMatrixBase(_base.SOMatrixBase):
                 result.normalize()
         else:
             raise ValueError(
-                "Invalid rotation matrix. Use normalize=True to handle rounding errors.")
+                "Invalid rotation matrix. Use normalize=True to handle rounding errors."
+            )
 
         return result
 
     @classmethod
     def is_valid_matrix(cls, mat):
         """Check if a matrix is a valid rotation matrix."""
-        return mat.shape == (cls.dim, cls.dim) and \
-            np.isclose(np.linalg.det(mat), 1.) and \
-            np.allclose(mat.T.dot(mat), np.identity(cls.dim))
+        return (
+            mat.shape == (cls.dim, cls.dim)
+            and np.isclose(np.linalg.det(mat), 1.0)
+            and np.allclose(mat.T.dot(mat), np.identity(cls.dim))
+        )
 
     def normalize(self):
         """Normalize the rotation matrix to ensure it is valid and
@@ -82,17 +85,16 @@ class SEMatrixBase(_base.SEMatrixBase):
         """Return the matrix representation of the rotation."""
         R = self.rot.as_matrix()
         t = np.reshape(self.trans, (self.dim - 1, 1))
-        bottom_row = np.append(np.zeros(self.dim - 1), 1.)
-        return np.vstack([np.hstack([R, t]),
-                          bottom_row])
+        bottom_row = np.append(np.zeros(self.dim - 1), 1.0)
+        return np.vstack([np.hstack([R, t]), bottom_row])
 
     def dot(self, other):
-        """Multiply another rotation or one or more vectors on the left.
-        """
+        """Multiply another rotation or one or more vectors on the left."""
         if isinstance(other, self.__class__):
             # Compound with another transformation
-            return self.__class__(self.rot.dot(other.rot),
-                                  self.rot.dot(other.trans) + self.trans)
+            return self.__class__(
+                self.rot.dot(other.rot), self.rot.dot(other.trans) + self.trans
+            )
         else:
             other = np.atleast_2d(other)
 
@@ -103,8 +105,11 @@ class SEMatrixBase(_base.SEMatrixBase):
                 # Transform one or more 3-vectors
                 return np.squeeze(self.as_matrix().dot(other.T)).T
             else:
-                raise ValueError("Vector must have shape ({},), ({},), (N,{}) or (N,{})".format(
-                    self.dim - 1, self.dim, self.dim - 1, self.dim))
+                raise ValueError(
+                    "Vector must have shape ({},), ({},), (N,{}) or (N,{})".format(
+                        self.dim - 1, self.dim, self.dim - 1, self.dim
+                    )
+                )
 
     @classmethod
     def from_matrix(cls, mat, normalize=False):
@@ -117,13 +122,15 @@ class SEMatrixBase(_base.SEMatrixBase):
 
         if mat_is_valid or normalize:
             result = cls(
-                cls.RotationType(mat[0:cls.dim - 1, 0:cls.dim - 1]),
-                mat[0:cls.dim - 1, cls.dim - 1])
+                cls.RotationType(mat[0 : cls.dim - 1, 0 : cls.dim - 1]),
+                mat[0 : cls.dim - 1, cls.dim - 1],
+            )
             if not mat_is_valid and normalize:
                 result.normalize()
         else:
             raise ValueError(
-                "Invalid transformation matrix. Use normalize=True to handle rounding errors.")
+                "Invalid transformation matrix. Use normalize=True to handle rounding errors."
+            )
 
         return result
 
@@ -149,11 +156,13 @@ class SEMatrixBase(_base.SEMatrixBase):
     @classmethod
     def is_valid_matrix(cls, mat):
         """Check if a matrix is a valid transformation matrix."""
-        bottom_row = np.append(np.zeros(cls.dim - 1), 1.)
+        bottom_row = np.append(np.zeros(cls.dim - 1), 1.0)
 
-        return mat.shape == (cls.dim, cls.dim) and \
-            np.array_equal(mat[cls.dim - 1, :], bottom_row) and \
-            cls.RotationType.is_valid_matrix(mat[0:cls.dim - 1, 0:cls.dim - 1])
+        return (
+            mat.shape == (cls.dim, cls.dim)
+            and np.array_equal(mat[cls.dim - 1, :], bottom_row)
+            and cls.RotationType.is_valid_matrix(mat[0 : cls.dim - 1, 0 : cls.dim - 1])
+        )
 
     def normalize(self):
         """Normalize the transformation matrix to ensure it is valid and

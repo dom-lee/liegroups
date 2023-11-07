@@ -6,25 +6,29 @@ from .so3 import SO3Matrix
 
 class SE3Matrix(_base.SEMatrixBase):
     """Homogeneous transformation matrix in :math:`SE(3)` using active (alibi) transformations.
-
     .. math::
         SE(3) &= \\left\\{ \\mathbf{T}=
                 \\begin{bmatrix}
                     \\mathbf{C} & \\mathbf{r} \\\\
                     \\mathbf{0}^T & 1
-                \\end{bmatrix} \\in \\mathbb{R}^{4 \\times 4} ~\\middle|~ \\mathbf{C} \\in SO(3), \\mathbf{r} \\in \\mathbb{R}^3 \\right\\} \\\\
+                \\end{bmatrix}
+                \\in \\mathbb{R}^{4 \\times 4} ~\\middle|~ 
+                \\mathbf{C} \\in SO(3), \\mathbf{r} \\in \\mathbb{R}^3 \\right\\} \\\\
         \\mathfrak{se}(3) &= \\left\\{ \\boldsymbol{\\Xi} =
-        \\boldsymbol{\\xi}^\\wedge \\in \\mathbb{R}^{4 \\times 4} ~\\middle|~
-         \\boldsymbol{\\xi}=
-            \\begin{bmatrix}
-                \\boldsymbol{\\rho} \\\\ \\boldsymbol{\\phi}
-            \\end{bmatrix} \\in \\mathbb{R}^6, \\boldsymbol{\\rho} \\in \\mathbb{R}^3, \\boldsymbol{\\phi} \\in \\mathbb{R}^3 \\right\\}
+            \\boldsymbol{\\xi}^\\wedge \\in \\mathbb{R}^{4 \\times 4} ~\\middle|~
+             \\boldsymbol{\\xi}=
+                \\begin{bmatrix}
+                    \\boldsymbol{\rho} \\ \\boldsymbol{\\phi}
+                \\end{bmatrix}
+                \\in \\mathbb{R}^6, \boldsymbol{\rho} \\in \\mathbb{R}^3,
+                \\boldsymbol{\\phi} \\in \\mathbb{R}^3 \\right\\}
 
     :cvar ~liegroups.SE2.dim: Dimension of the rotation matrix.
     :cvar ~liegroups.SE2.dof: Underlying degrees of freedom (i.e., dimension of the tangent space).
     :ivar rot: Storage for the rotation matrix :math:`\\mathbf{C}`.
     :ivar trans: Storage for the translation vector :math:`\\mathbf{r}`.
     """
+
     dim = 4
     """Dimension of the transformation matrix."""
     dof = 6
@@ -44,9 +48,10 @@ class SE3Matrix(_base.SEMatrixBase):
         """
         rotmat = self.rot.as_matrix()
         return np.vstack(
-            [np.hstack([rotmat,
-                        self.RotationType.wedge(self.trans).dot(rotmat)]),
-             np.hstack([np.zeros((3, 3)), rotmat])]
+            [
+                np.hstack([rotmat, self.RotationType.wedge(self.trans).dot(rotmat)]),
+                np.hstack([np.zeros((3, 3)), rotmat]),
+            ]
         )
 
     @classmethod
@@ -54,7 +59,7 @@ class SE3Matrix(_base.SEMatrixBase):
         """:math:`SE(3)` curlyvee operator as defined by Barfoot.
 
         .. math::
-            \\boldsymbol{\\xi} = 
+            \\boldsymbol{\\xi} =
             \\boldsymbol{\\Psi}^\\curlyvee
 
         This is the inverse operation to :meth:`~liegroups.SE3.curlywedge`.
@@ -63,8 +68,11 @@ class SE3Matrix(_base.SEMatrixBase):
             Psi = np.expand_dims(Psi, axis=0)
 
         if Psi.shape[1:3] != (cls.dof, cls.dof):
-            raise ValueError("Psi must have shape ({},{}) or (N,{},{})".format(
-                cls.dof, cls.dof, cls.dof, cls.dof))
+            raise ValueError(
+                "Psi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dof, cls.dof, cls.dof, cls.dof
+                )
+            )
 
         xi = np.empty([Psi.shape[0], cls.dof])
         xi[:, 0:3] = cls.RotationType.vee(Psi[:, 0:3, 3:6])
@@ -89,7 +97,8 @@ class SE3Matrix(_base.SEMatrixBase):
         xi = np.atleast_2d(xi)
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Psi = np.zeros([xi.shape[0], cls.dof, cls.dof])
         Psi[:, 0:3, 0:3] = cls.RotationType.wedge(xi[:, 3:6])
@@ -117,8 +126,9 @@ class SE3Matrix(_base.SEMatrixBase):
 
         rho = xi[0:3]
         phi = xi[3:6]
-        return cls(cls.RotationType.exp(phi),
-                   cls.RotationType.left_jacobian(phi).dot(rho))
+        return cls(
+            cls.RotationType.exp(phi), cls.RotationType.left_jacobian(phi).dot(rho)
+        )
 
     @classmethod
     def left_jacobian_Q_matrix(cls, xi):
@@ -126,22 +136,22 @@ class SE3Matrix(_base.SEMatrixBase):
 
         .. math::
             \\mathbf{Q}(\\boldsymbol{\\xi}) =
-            \\frac{1}{2}\\boldsymbol{\\rho}^\\wedge &+ 
+            \\frac{1}{2}\\boldsymbol{\\rho}^\\wedge &+
             \\left( \\frac{\\phi - \\sin \\phi}{\\phi^3} \\right)
-                \\left( 
-                    \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge + 
-                    \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge + 
+                \\left(
+                    \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge +
+                    \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge +
                     \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge
                 \\right) \\\\ &+
             \\left( \\frac{\\phi^2 + 2 \\cos \\phi - 2}{2 \\phi^4} \\right)
-                \\left( 
-                    \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge + 
-                    \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\phi}^\\wedge - 
+                \\left(
+                    \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge +
+                    \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\phi}^\\wedge -
                     3 \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge
                 \\right) \\\\ &+
             \\left( \\frac{2 \\phi - 3 \\sin \\phi + \\phi \\cos \\phi}{2 \\phi^5} \\right)
-                \\left( 
-                    \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\phi}^\\wedge + 
+                \\left(
+                    \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\phi}^\\wedge +
                     \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\phi}^\\wedge \\boldsymbol{\\rho}^\\wedge \\boldsymbol{\\phi}^\\wedge
                 \\right)
         """
@@ -165,12 +175,12 @@ class SE3Matrix(_base.SEMatrixBase):
 
         m1 = 0.5
         m2 = (ph - sph) / ph3
-        m3 = (0.5 * ph2 + cph - 1.) / ph4
+        m3 = (0.5 * ph2 + cph - 1.0) / ph4
         m4 = (ph - 1.5 * sph + 0.5 * ph * cph) / ph5
 
         t1 = rx
         t2 = px.dot(rx) + rx.dot(px) + px.dot(rx).dot(px)
-        t3 = px.dot(px).dot(rx) + rx.dot(px).dot(px) - 3. * px.dot(rx).dot(px)
+        t3 = px.dot(px).dot(rx) + rx.dot(px).dot(px) - 3.0 * px.dot(rx).dot(px)
         t4 = px.dot(rx).dot(px).dot(px) + px.dot(px).dot(rx).dot(px)
 
         return m1 * t1 + m2 * t2 + m3 * t3 + m4 * t4
@@ -192,7 +202,7 @@ class SE3Matrix(_base.SEMatrixBase):
         phi = xi[3:6]  # rotation part
 
         # Near |phi|==0, use first order Taylor expansion
-        if np.isclose(np.linalg.norm(phi), 0.):
+        if np.isclose(np.linalg.norm(phi), 0.0):
             return np.identity(cls.dof) - 0.5 * cls.curlywedge(xi)
 
         so3_inv_jac = cls.RotationType.inv_left_jacobian(phi)
@@ -222,7 +232,7 @@ class SE3Matrix(_base.SEMatrixBase):
         phi = xi[3:6]  # rotation part
 
         # Near |phi|==0, use first order Taylor expansion
-        if np.isclose(np.linalg.norm(phi), 0.):
+        if np.isclose(np.linalg.norm(phi), 0.0):
             return np.identity(cls.dof) + 0.5 * cls.curlywedge(xi)
 
         so3_jac = cls.RotationType.left_jacobian(phi)
@@ -236,7 +246,8 @@ class SE3Matrix(_base.SEMatrixBase):
         return jac
 
     def log(self):
-        """Logarithmic map for :math:`SE(3)`, which computes a tangent vector from a transformation:
+        """Logarithmic map for :math:`SE(3)`,
+        which computes a tangent vector from a transformation:
 
         .. math::
             \\boldsymbol{\\xi}(\\mathbf{T}) =
@@ -303,8 +314,11 @@ class SE3Matrix(_base.SEMatrixBase):
             result[:, 0:3, 3:6] = cls.RotationType.wedge(-p[:, 0:3])
 
         else:
-            raise ValueError("p must have shape ({},), ({},), (N,{}) or (N,{})".format(
-                cls.dim - 1, cls.dim, cls.dim - 1, cls.dim))
+            raise ValueError(
+                "p must have shape ({},), ({},), (N,{}) or (N,{})".format(
+                    cls.dim - 1, cls.dim, cls.dim - 1, cls.dim
+                )
+            )
 
         return np.squeeze(result)
 
@@ -321,8 +335,11 @@ class SE3Matrix(_base.SEMatrixBase):
             Xi = np.expand_dims(Xi, axis=0)
 
         if Xi.shape[1:3] != (cls.dim, cls.dim):
-            raise ValueError("Xi must have shape ({},{}) or (N,{},{})".format(
-                cls.dim, cls.dim, cls.dim, cls.dim))
+            raise ValueError(
+                "Xi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dim, cls.dim, cls.dim, cls.dim
+                )
+            )
 
         xi = np.empty([Xi.shape[0], cls.dof])
         xi[:, 0:3] = Xi[:, 0:3, 3]
@@ -346,7 +363,8 @@ class SE3Matrix(_base.SEMatrixBase):
         xi = np.atleast_2d(xi)
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Xi = np.zeros([xi.shape[0], cls.dim, cls.dim])
         Xi[:, 0:3, 0:3] = cls.RotationType.wedge(xi[:, 3:6])

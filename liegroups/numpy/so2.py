@@ -14,6 +14,7 @@ class SO2Matrix(_base.SOMatrixBase):
     :cvar ~liegroups.SO2.dof: Underlying degrees of freedom (i.e., dimension of the tangent space).
     :ivar mat: Storage for the rotation matrix :math:`\\mathbf{C}`.
     """
+
     dim = 2
     """Dimension of the transformation matrix."""
     dof = 1
@@ -25,7 +26,7 @@ class SO2Matrix(_base.SOMatrixBase):
         .. math::
             \\text{Ad}(\\mathbf{C}) = 1
         """
-        return 1.
+        return 1.0
 
     @classmethod
     def exp(cls, phi):
@@ -45,8 +46,7 @@ class SO2Matrix(_base.SOMatrixBase):
         c = np.cos(phi)
         s = np.sin(phi)
 
-        return cls(np.array([[c, -s],
-                             [s,  c]]))
+        return cls(np.array([[c, -s], [s, c]]))
 
     @classmethod
     def from_angle(cls, angle_in_radians):
@@ -69,13 +69,14 @@ class SO2Matrix(_base.SOMatrixBase):
             \\end{cases}
         """
         # Near phi==0, use first order Taylor expansion
-        if np.isclose(phi, 0.):
+        if np.isclose(phi, 0.0):
             return np.identity(cls.dim) - 0.5 * cls.wedge(phi)
 
         half_angle = 0.5 * phi
-        cot_half_angle = 1. / np.tan(half_angle)
-        return half_angle * cot_half_angle * np.identity(cls.dim) - \
-            half_angle * cls.wedge(1.)
+        cot_half_angle = 1.0 / np.tan(half_angle)
+        return half_angle * cot_half_angle * np.identity(
+            cls.dim
+        ) - half_angle * cls.wedge(1.0)
 
     @classmethod
     def left_jacobian(cls, phi):
@@ -90,20 +91,19 @@ class SO2Matrix(_base.SOMatrixBase):
             \\end{cases}
         """
         # Near phi==0, use first order Taylor expansion
-        if np.isclose(phi, 0.):
+        if np.isclose(phi, 0.0):
             return np.identity(cls.dim) + 0.5 * cls.wedge(phi)
 
         s = np.sin(phi)
         c = np.cos(phi)
 
-        return (s / phi) * np.identity(cls.dim) + \
-            ((1 - c) / phi) * cls.wedge(1.)
+        return (s / phi) * np.identity(cls.dim) + ((1 - c) / phi) * cls.wedge(1.0)
 
     def log(self):
         """Logarithmic map for :math:`SO(2)`, which computes a tangent vector from a transformation:
 
         .. math::
-            \\phi(\\mathbf{C}) = 
+            \\phi(\\mathbf{C}) =
             \\ln(\\mathbf{C})^\\vee =
             \\text{atan2}(C_{1,0}, C_{0,0})
 
@@ -135,7 +135,9 @@ class SO2Matrix(_base.SOMatrixBase):
         if Phi.shape[1:3] != (cls.dim, cls.dim):
             raise ValueError(
                 "Phi must have shape ({},{}) or (N,{},{})".format(
-                    cls.dim, cls.dim, cls.dim, cls.dim))
+                    cls.dim, cls.dim, cls.dim, cls.dim
+                )
+            )
 
         return np.squeeze(Phi[:, 1, 0])
 

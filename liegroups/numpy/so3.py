@@ -14,6 +14,7 @@ class SO3Matrix(_base.SOMatrixBase):
     :cvar ~liegroups.SO3.dof: Underlying degrees of freedom (i.e., dimension of the tangent space).
     :ivar mat: Storage for the rotation matrix :math:`\\mathbf{C}`.
     """
+
     dim = 3
     """Dimension of the transformation matrix."""
     dof = 3
@@ -50,19 +51,21 @@ class SO3Matrix(_base.SOMatrixBase):
         angle = np.linalg.norm(phi)
 
         # Near phi==0, use first order Taylor expansion
-        if np.isclose(angle, 0.):
+        if np.isclose(angle, 0.0):
             return cls(np.identity(cls.dim) + cls.wedge(phi))
 
         axis = phi / angle
         s = np.sin(angle)
         c = np.cos(angle)
 
-        return cls(c * np.identity(cls.dim) +
-                   (1 - c) * np.outer(axis, axis) +
-                   s * cls.wedge(axis))
+        return cls(
+            c * np.identity(cls.dim)
+            + (1 - c) * np.outer(axis, axis)
+            + s * cls.wedge(axis)
+        )
 
     @classmethod
-    def from_quaternion(cls, quat, ordering='wxyz'):
+    def from_quaternion(cls, quat, ordering="wxyz"):
         """Form a rotation matrix from a unit length quaternion.
 
         Valid orderings are 'xyzw' and 'wxyz'.
@@ -75,16 +78,17 @@ class SO3Matrix(_base.SOMatrixBase):
                 2 (xz - wy) & 2 (wx + yz) & 1 - 2 (x^2 + y^2)
             \\end{bmatrix}
         """
-        if not np.isclose(np.linalg.norm(quat), 1.):
+        if not np.isclose(np.linalg.norm(quat), 1.0):
             raise ValueError("Quaternion must be unit length")
 
-        if ordering is 'xyzw':
+        if ordering == "xyzw":
             qx, qy, qz, qw = quat
-        elif ordering is 'wxyz':
+        elif ordering == "wxyz":
             qw, qx, qy, qz = quat
         else:
             raise ValueError(
-                "Valid orderings are 'xyzw' and 'wxyz'. Got '{}'.".format(ordering))
+                "Valid orderings are 'xyzw' and 'wxyz'. Got '{}'.".format(ordering)
+            )
 
         # Form the matrix
         qw2 = qw * qw
@@ -92,21 +96,19 @@ class SO3Matrix(_base.SOMatrixBase):
         qy2 = qy * qy
         qz2 = qz * qz
 
-        R00 = 1. - 2. * (qy2 + qz2)
-        R01 = 2. * (qx * qy - qw * qz)
-        R02 = 2. * (qw * qy + qx * qz)
+        R00 = 1.0 - 2.0 * (qy2 + qz2)
+        R01 = 2.0 * (qx * qy - qw * qz)
+        R02 = 2.0 * (qw * qy + qx * qz)
 
-        R10 = 2. * (qw * qz + qx * qy)
-        R11 = 1. - 2. * (qx2 + qz2)
-        R12 = 2. * (qy * qz - qw * qx)
+        R10 = 2.0 * (qw * qz + qx * qy)
+        R11 = 1.0 - 2.0 * (qx2 + qz2)
+        R12 = 2.0 * (qy * qz - qw * qx)
 
-        R20 = 2. * (qx * qz - qw * qy)
-        R21 = 2. * (qw * qx + qy * qz)
-        R22 = 1. - 2. * (qx2 + qy2)
+        R20 = 2.0 * (qx * qz - qw * qy)
+        R21 = 2.0 * (qw * qx + qy * qz)
+        R22 = 1.0 - 2.0 * (qx2 + qy2)
 
-        return cls(np.array([[R00, R01, R02],
-                             [R10, R11, R12],
-                             [R20, R21, R22]]))
+        return cls(np.array([[R00, R01, R02], [R10, R11, R12], [R20, R21, R22]]))
 
     @classmethod
     def from_rpy(cls, roll, pitch, yaw):
@@ -136,16 +138,18 @@ class SO3Matrix(_base.SOMatrixBase):
         angle = np.linalg.norm(phi)
 
         # Near phi==0, use first order Taylor expansion
-        if np.isclose(angle, 0.):
+        if np.isclose(angle, 0.0):
             return np.identity(cls.dof) - 0.5 * cls.wedge(phi)
 
         axis = phi / angle
         half_angle = 0.5 * angle
-        cot_half_angle = 1. / np.tan(half_angle)
+        cot_half_angle = 1.0 / np.tan(half_angle)
 
-        return half_angle * cot_half_angle * np.identity(cls.dof) + \
-            (1 - half_angle * cot_half_angle) * np.outer(axis, axis) - \
-            half_angle * cls.wedge(axis)
+        return (
+            half_angle * cot_half_angle * np.identity(cls.dof)
+            + (1 - half_angle * cot_half_angle) * np.outer(axis, axis)
+            - half_angle * cls.wedge(axis)
+        )
 
     @classmethod
     def left_jacobian(cls, phi):
@@ -166,16 +170,18 @@ class SO3Matrix(_base.SOMatrixBase):
         angle = np.linalg.norm(phi)
 
         # Near |phi|==0, use first order Taylor expansion
-        if np.isclose(angle, 0.):
+        if np.isclose(angle, 0.0):
             return np.identity(cls.dof) + 0.5 * cls.wedge(phi)
 
         axis = phi / angle
         s = np.sin(angle)
         c = np.cos(angle)
 
-        return (s / angle) * np.identity(cls.dof) + \
-            (1 - s / angle) * np.outer(axis, axis) + \
-            ((1 - c) / angle) * cls.wedge(axis)
+        return (
+            (s / angle) * np.identity(cls.dof)
+            + (1 - s / angle) * np.outer(axis, axis)
+            + ((1 - c) / angle) * cls.wedge(axis)
+        )
 
     def log(self):
         """Logarithmic map for :math:`SO(3)`, which computes a tangent vector from a transformation:
@@ -194,11 +200,11 @@ class SO3Matrix(_base.SOMatrixBase):
         # The cosine of the rotation angle is related to the trace of C
         cos_angle = 0.5 * np.trace(self.mat) - 0.5
         # Clip cos(angle) to its proper domain to avoid NaNs from rounding errors
-        cos_angle = np.clip(cos_angle, -1., 1.)
+        cos_angle = np.clip(cos_angle, -1.0, 1.0)
         angle = np.arccos(cos_angle)
 
         # If angle is close to zero, use first-order Taylor expansion
-        if np.isclose(angle, 0.):
+        if np.isclose(angle, 0.0):
             return self.vee(self.mat - np.identity(3))
 
         # Otherwise take the matrix logarithm and return the rotation vector
@@ -219,9 +225,7 @@ class SO3Matrix(_base.SOMatrixBase):
         c = np.cos(angle_in_radians)
         s = np.sin(angle_in_radians)
 
-        return cls(np.array([[1., 0., 0.],
-                             [0., c, -s],
-                             [0., s,  c]]))
+        return cls(np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]]))
 
     @classmethod
     def roty(cls, angle_in_radians):
@@ -238,9 +242,7 @@ class SO3Matrix(_base.SOMatrixBase):
         c = np.cos(angle_in_radians)
         s = np.sin(angle_in_radians)
 
-        return cls(np.array([[c,  0., s],
-                             [0., 1., 0.],
-                             [-s, 0., c]]))
+        return cls(np.array([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]]))
 
     @classmethod
     def rotz(cls, angle_in_radians):
@@ -257,71 +259,69 @@ class SO3Matrix(_base.SOMatrixBase):
         c = np.cos(angle_in_radians)
         s = np.sin(angle_in_radians)
 
-        return cls(np.array([[c, -s,  0.],
-                             [s,  c,  0.],
-                             [0., 0., 1.]]))
+        return cls(np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]]))
 
-    def to_quaternion(self, ordering='wxyz'):
+    def to_quaternion(self, ordering="wxyz"):
         """Convert a rotation matrix to a unit length quaternion.
 
-           Valid orderings are 'xyzw' and 'wxyz'.
+        Valid orderings are 'xyzw' and 'wxyz'.
         """
         R = self.mat
-        qw = 0.5 * np.sqrt(1. + R[0, 0] + R[1, 1] + R[2, 2])
+        qw = 0.5 * np.sqrt(1.0 + R[0, 0] + R[1, 1] + R[2, 2])
 
-        if np.isclose(qw, 0.):
+        if np.isclose(qw, 0.0):
             if R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
-                d = 2. * np.sqrt(1. + R[0, 0] - R[1, 1] - R[2, 2])
+                d = 2.0 * np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
                 qw = (R[2, 1] - R[1, 2]) / d
                 qx = 0.25 * d
                 qy = (R[1, 0] + R[0, 1]) / d
                 qz = (R[0, 2] + R[2, 0]) / d
             elif R[1, 1] > R[2, 2]:
-                d = 2. * np.sqrt(1. + R[1, 1] - R[0, 0] - R[2, 2])
+                d = 2.0 * np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
                 qw = (R[0, 2] - R[2, 0]) / d
                 qx = (R[1, 0] + R[0, 1]) / d
                 qy = 0.25 * d
                 qz = (R[2, 1] + R[1, 2]) / d
             else:
-                d = 2. * np.sqrt(1. + R[2, 2] - R[0, 0] - R[1, 1])
+                d = 2.0 * np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
                 qw = (R[1, 0] - R[0, 1]) / d
                 qx = (R[0, 2] + R[2, 0]) / d
                 qy = (R[2, 1] + R[1, 2]) / d
                 qz = 0.25 * d
         else:
-            d = 4. * qw
+            d = 4.0 * qw
             qx = (R[2, 1] - R[1, 2]) / d
             qy = (R[0, 2] - R[2, 0]) / d
             qz = (R[1, 0] - R[0, 1]) / d
 
         # Check ordering last
-        if ordering is 'xyzw':
+        if ordering == "xyzw":
             quat = np.array([qx, qy, qz, qw])
-        elif ordering is 'wxyz':
+        elif ordering == "wxyz":
             quat = np.array([qw, qx, qy, qz])
         else:
             raise ValueError(
-                "Valid orderings are 'xyzw' and 'wxyz'. Got '{}'.".format(ordering))
+                "Valid orderings are 'xyzw' and 'wxyz'. Got '{}'.".format(ordering)
+            )
 
         return quat
 
     def to_rpy(self):
         """Convert a rotation matrix to RPY Euler angles :math:`(\\alpha, \\beta, \\gamma)`."""
-        pitch = np.arctan2(-self.mat[2, 0],
-                           np.sqrt(self.mat[0, 0]**2 + self.mat[1, 0]**2))
+        pitch = np.arctan2(
+            -self.mat[2, 0], np.sqrt(self.mat[0, 0] ** 2 + self.mat[1, 0] ** 2)
+        )
 
-        if np.isclose(pitch, np.pi / 2.):
-            yaw = 0.
+        if np.isclose(pitch, np.pi / 2.0):
+            yaw = 0.0
             roll = np.arctan2(self.mat[0, 1], self.mat[1, 1])
-        elif np.isclose(pitch, -np.pi / 2.):
-            yaw = 0.
+        elif np.isclose(pitch, -np.pi / 2.0):
+            yaw = 0.0
             roll = -np.arctan2(self.mat[0, 1], self.mat[1, 1])
         else:
-            sec_pitch = 1. / np.cos(pitch)
-            yaw = np.arctan2(self.mat[1, 0] * sec_pitch,
-                             self.mat[0, 0] * sec_pitch)
-            roll = np.arctan2(self.mat[2, 1] * sec_pitch,
-                              self.mat[2, 2] * sec_pitch)
+            sec_pitch = 1.0 / np.cos(pitch)
+            yaw = np.arctan2(self.mat[1, 0] * sec_pitch, self.mat[0, 0] * sec_pitch)
+            roll = np.arctan2(self.mat[2, 1] * sec_pitch, self.mat[2, 2] * sec_pitch)
 
         return roll, pitch, yaw
 
@@ -338,8 +338,11 @@ class SO3Matrix(_base.SOMatrixBase):
             Phi = np.expand_dims(Phi, axis=0)
 
         if Phi.shape[1:3] != (cls.dim, cls.dim):
-            raise ValueError("Phi must have shape ({},{}) or (N,{},{})".format(
-                cls.dim, cls.dim, cls.dim, cls.dim))
+            raise ValueError(
+                "Phi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dim, cls.dim, cls.dim, cls.dim
+                )
+            )
 
         phi = np.empty([Phi.shape[0], cls.dim])
         phi[:, 0] = Phi[:, 2, 1]
@@ -365,7 +368,8 @@ class SO3Matrix(_base.SOMatrixBase):
         phi = np.atleast_2d(phi)
         if phi.shape[1] != cls.dof:
             raise ValueError(
-                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Phi = np.zeros([phi.shape[0], cls.dim, cls.dim])
         Phi[:, 0, 1] = -phi[:, 2]
@@ -383,25 +387,29 @@ class SO3Quaternion(_base.VectorLieGroupBase):
     dim = 4
     dof = 3
 
-    def from_array(self, arr, ordering='wxyz'):
-        if ordering is 'xyzw':
+    def from_array(self, arr, ordering="wxyz"):
+        if ordering == "xyzw":
             self.data = arr[[3, 0, 1, 2]]
-        elif ordering is 'wxyz':
+        elif ordering == "wxyz":
             self.data = arr
         else:
             raise ValueError(
-                "Valid orderings are 'xyzw' and 'wxyz'. Got '{}'.".format(ordering))
+                "Valid orderings are 'xyzw' and 'wxyz'. Got '{}'.".format(ordering)
+            )
 
     def dot(self, other):
-        """Multiply another rotation or one or more vectors on the left.
-        """
+        """Multiply another rotation or one or more vectors on the left."""
         if isinstance(other, self.__class__):
             # Compound with another rotation
             pv = p[1:]
             qv = q[1:]
 
-            r = np.hstack([p[0]*q[0] - np.dot(pv, qv),
-                           p[0]*qv + q[0]*pv + np.dot(skew(pv), qv)])
+            r = np.hstack(
+                [
+                    p[0] * q[0] - np.dot(pv, qv),
+                    p[0] * qv + q[0] * pv + np.dot(skew(pv), qv),
+                ]
+            )
             return 0
         else:
             other = np.atleast_2d(other)
@@ -411,7 +419,8 @@ class SO3Quaternion(_base.VectorLieGroupBase):
                 return 0
             else:
                 raise ValueError(
-                    "Vector must have shape ({},) or (N,{})".format(self.dim, self.dim))
+                    "Vector must have shape ({},) or (N,{})".format(self.dim, self.dim)
+                )
 
     @classmethod
     def identity(cls):

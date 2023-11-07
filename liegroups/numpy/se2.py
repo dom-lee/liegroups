@@ -25,6 +25,7 @@ class SE2Matrix(_base.SEMatrixBase):
     :ivar rot: Storage for the rotation matrix :math:`\\mathbf{C}`.
     :ivar trans: Storage for the translation vector :math:`\\mathbf{r}`.
     """
+
     dim = 3
     """Dimension of the transformation matrix."""
     dof = 3
@@ -44,8 +45,7 @@ class SE2Matrix(_base.SEMatrixBase):
         """
         rot_part = self.rot.as_matrix()
         trans_part = np.array([self.trans[1], -self.trans[0]]).reshape((2, 1))
-        return np.vstack([np.hstack([rot_part, trans_part]),
-                          [0, 0, 1]])
+        return np.vstack([np.hstack([rot_part, trans_part]), [0, 0, 1]])
 
     @classmethod
     def exp(cls, xi):
@@ -66,8 +66,9 @@ class SE2Matrix(_base.SEMatrixBase):
 
         rho = xi[0:2]
         phi = xi[2]
-        return cls(cls.RotationType.exp(phi),
-                   cls.RotationType.left_jacobian(phi).dot(rho))
+        return cls(
+            cls.RotationType.exp(phi), cls.RotationType.left_jacobian(phi).dot(rho)
+        )
 
     @classmethod
     def inv_left_jacobian(cls, xi):
@@ -154,8 +155,11 @@ class SE2Matrix(_base.SEMatrixBase):
             result[:, 0:2, 2] = cls.RotationType.wedge(1).dot(p[:, 0:2].T).T
 
         else:
-            raise ValueError("p must have shape ({},), ({},), (N,{}) or (N,{})".format(
-                cls.dim - 1, cls.dim, cls.dim - 1, cls.dim))
+            raise ValueError(
+                "p must have shape ({},), ({},), (N,{}) or (N,{})".format(
+                    cls.dim - 1, cls.dim, cls.dim - 1, cls.dim
+                )
+            )
 
         return np.squeeze(result)
 
@@ -172,8 +176,11 @@ class SE2Matrix(_base.SEMatrixBase):
             Xi = np.expand_dims(Xi, axis=0)
 
         if Xi.shape[1:3] != (cls.dof, cls.dof):
-            raise ValueError("Xi must have shape ({},{}) or (N,{},{})".format(
-                cls.dof, cls.dof, cls.dof, cls.dof))
+            raise ValueError(
+                "Xi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dof, cls.dof, cls.dof, cls.dof
+                )
+            )
 
         xi = np.empty([Xi.shape[0], cls.dof])
         xi[:, 0:2] = Xi[:, 0:2, 2]
@@ -197,7 +204,8 @@ class SE2Matrix(_base.SEMatrixBase):
         xi = np.atleast_2d(xi)
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Xi = np.zeros([xi.shape[0], cls.dof, cls.dof])
         Xi[:, 0:2, 0:2] = cls.RotationType.wedge(xi[:, 2])
