@@ -5,8 +5,8 @@ from future.utils import with_metaclass
 
 
 class LieGroupBase(with_metaclass(ABCMeta)):
-    """ Common abstract base class defining basic interface for Lie groups.
-        Does not depend on any specific linear algebra library.
+    """Common abstract base class defining basic interface for Lie groups.
+    Does not depend on any specific linear algebra library.
     """
 
     def __init__(self):
@@ -28,8 +28,7 @@ class LieGroupBase(with_metaclass(ABCMeta)):
 
     @abstractmethod
     def dot(self, other):
-        """Multiply another group element or one or more vectors on the left.
-        """
+        """Multiply another group element or one or more vectors on the left."""
         pass
 
     @classmethod
@@ -73,19 +72,20 @@ class LieGroupBase(with_metaclass(ABCMeta)):
 
     @abstractmethod
     def perturb(self, vec):
-        """Perturb the group element on the left by a vector in its local tangent space.
-        """
+        """Perturb the group element on the left by a vector in its local tangent space."""
         pass
 
 
 class MatrixLieGroupBase(LieGroupBase):
     """Common abstract base class defining basic interface for Matrix Lie Groups.
-       Does not depend on any specific linear algebra library.
+    Does not depend on any specific linear algebra library.
     """
 
     def __repr__(self):
         """Return a string representation of the transformation."""
-        return "<{}.{}>\n{}".format(self.__class__.__module__, self.__class__.__name__, self.as_matrix()).replace("\n", "\n| ")
+        return "<{}.{}>\n{}".format(
+            self.__class__.__module__, self.__class__.__name__, self.as_matrix()
+        ).replace("\n", "\n| ")
 
     @abstractmethod
     def adjoint(self):
@@ -142,7 +142,7 @@ class MatrixLieGroupBase(LieGroupBase):
 
 class SOMatrixBase(MatrixLieGroupBase):
     """Common abstract base class for Special Orthogonal Matrix Lie Groups SO(N).
-       Does not depend on any specific linear algebra library.
+    Does not depend on any specific linear algebra library.
     """
 
     def __init__(self, mat):
@@ -165,7 +165,7 @@ class SOMatrixBase(MatrixLieGroupBase):
 
 class SEMatrixBase(MatrixLieGroupBase):
     """Common abstract base class for Special Euclidean Matrix Lie Groups SE(N).
-       Does not depend on any specific linear algebra library.
+    Does not depend on any specific linear algebra library.
     """
 
     def __init__(self, rot, trans):
@@ -200,9 +200,9 @@ class SEMatrixBase(MatrixLieGroupBase):
 
 
 class VectorLieGroupBase(LieGroupBase):
-    """Common abstract base class for Lie Groups with vector parametrizations 
-       (complex, quaternions, dual quaternions). Does not depend on any  
-       specific linear algebra library.
+    """Common abstract base class for Lie Groups with vector parametrizations
+    (complex, quaternions, dual quaternions). Does not depend on any
+    specific linear algebra library.
     """
 
     def __init__(self, data):
@@ -210,7 +210,9 @@ class VectorLieGroupBase(LieGroupBase):
 
     def __repr__(self):
         """Return a string representation of the transformation."""
-        return "<{}.{}>\n{}".format(self.__class__.__module__, self.__class__.__name__, self.data).replace("\n", "\n| ")
+        return "<{}.{}>\n{}".format(
+            self.__class__.__module__, self.__class__.__name__, self.data
+        ).replace("\n", "\n| ")
 
     @abstractmethod
     def conjugate(self):

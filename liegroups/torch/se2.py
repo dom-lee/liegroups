@@ -7,6 +7,7 @@ from .so2 import SO2Matrix
 
 class SE2Matrix(_base.SEMatrixBase):
     """See :mod:`liegroups.SE2`"""
+
     dim = 3
     dof = 3
     RotationType = SO2Matrix
@@ -21,18 +22,21 @@ class SE2Matrix(_base.SEMatrixBase):
             # vector --> vectorbatch
             trans = trans.unsqueeze(dim=0)
 
-        trans_part = trans.new_empty(
-            trans.shape[0], trans.shape[1], 1)
+        trans_part = trans.new_empty(trans.shape[0], trans.shape[1], 1)
         trans_part[:, 0, 0] = trans[:, 1]
         trans_part[:, 1, 0] = -trans[:, 0]
 
         bottom_row = trans.new_zeros(self.dof)
-        bottom_row[-1] = 1.
-        bottom_row = bottom_row.unsqueeze_(dim=0).unsqueeze_(
-            dim=0).expand(trans.shape[0], 1, self.dof)
+        bottom_row[-1] = 1.0
+        bottom_row = (
+            bottom_row.unsqueeze_(dim=0)
+            .unsqueeze_(dim=0)
+            .expand(trans.shape[0], 1, self.dof)
+        )
 
-        return torch.cat([torch.cat([rot_part, trans_part], dim=2),
-                          bottom_row], dim=1).squeeze_()
+        return torch.cat(
+            [torch.cat([rot_part, trans_part], dim=2), bottom_row], dim=1
+        ).squeeze_()
 
     @classmethod
     def exp(cls, xi):
@@ -41,7 +45,8 @@ class SE2Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         rho = xi[:, 0:2]
         phi = xi[:, 2]
@@ -102,30 +107,35 @@ class SE2Matrix(_base.SEMatrixBase):
             # Assume scale parameter is 1 unless p is a direction
             # vector, in which case the scale is 0
             if not directional:
-                result[:, 0:2, 0:2] = torch.eye(
-                    cls.RotationType.dim).unsqueeze_(dim=0).expand(
-                        p.shape[0], cls.RotationType.dim, cls.RotationType.dim)
+                result[:, 0:2, 0:2] = (
+                    torch.eye(cls.RotationType.dim)
+                    .unsqueeze_(dim=0)
+                    .expand(p.shape[0], cls.RotationType.dim, cls.RotationType.dim)
+                )
 
             result[:, 0:2, 2] = torch.mm(
-                cls.RotationType.wedge(p.__class__([1.])),
-                p.transpose(1, 0)).transpose_(1, 0)
+                cls.RotationType.wedge(p.__class__([1.0])), p.transpose(1, 0)
+            ).transpose_(1, 0)
 
         # Got homogeneous coordinates
         elif p.shape[1] == cls.dim:
-            result[:, 0:2, 0:2] = \
-                p[:, 2].unsqueeze_(dim=1).unsqueeze_(dim=2) * \
-                torch.eye(
-                cls.RotationType.dim).unsqueeze_(dim=0).repeat(
-                p.shape[0], 1, 1)
+            result[:, 0:2, 0:2] = p[:, 2].unsqueeze_(dim=1).unsqueeze_(
+                dim=2
+            ) * torch.eye(cls.RotationType.dim).unsqueeze_(dim=0).repeat(
+                p.shape[0], 1, 1
+            )
 
             result[:, 0:2, 2] = torch.mm(
-                cls.RotationType.wedge(p.__class__([1.])),
-                p[:, 0:2].transpose_(1, 0)).transpose_(1, 0)
+                cls.RotationType.wedge(p.__class__([1.0])), p[:, 0:2].transpose_(1, 0)
+            ).transpose_(1, 0)
 
         # Got wrong dimension
         else:
-            raise ValueError("p must have shape ({},), ({},), (N,{}) or (N,{})".format(
-                cls.dim - 1, cls.dim, cls.dim - 1, cls.dim))
+            raise ValueError(
+                "p must have shape ({},), ({},), (N,{}) or (N,{})".format(
+                    cls.dim - 1, cls.dim, cls.dim - 1, cls.dim
+                )
+            )
 
         return result.squeeze_()
 
@@ -135,8 +145,11 @@ class SE2Matrix(_base.SEMatrixBase):
             Xi = Xi.unsqueeze(dim=0)
 
         if Xi.shape[1:3] != (cls.dim, cls.dim):
-            raise ValueError("Xi must have shape ({},{}) or (N,{},{})".format(
-                cls.dim, cls.dim, cls.dim, cls.dim))
+            raise ValueError(
+                "Xi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dim, cls.dim, cls.dim, cls.dim
+                )
+            )
 
         xi = Xi.new_empty(Xi.shape[0], cls.dof)
         xi[:, 0:2] = Xi[:, 0:2, 2]
@@ -151,7 +164,8 @@ class SE2Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Xi = xi.new_zeros(xi.shape[0], cls.dim, cls.dim)
         Xi[:, 0:2, 0:2] = cls.RotationType.wedge(xi[:, 2])

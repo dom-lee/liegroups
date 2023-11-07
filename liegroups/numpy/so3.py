@@ -267,7 +267,8 @@ class SO3Matrix(_base.SOMatrixBase):
         Valid orderings are 'xyzw' and 'wxyz'.
         """
         R = self.mat
-        qw = 0.5 * np.sqrt(1.0 + R[0, 0] + R[1, 1] + R[2, 2])
+        trace = np.clip(np.trace(R), -1.0, 3.0)
+        qw = 0.5 * np.sqrt(1.0 + trace)
 
         if np.isclose(qw, 0.0):
             if R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:

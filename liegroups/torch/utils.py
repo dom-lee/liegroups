@@ -29,11 +29,15 @@ def outer(vecs1, vecs2):
         vecs2 = vecs2.unsqueeze(dim=0)
 
     if vecs1.shape[0] != vecs2.shape[0]:
-        raise ValueError("Got inconsistent batch sizes {} and {}".format(
-            vecs1.shape[0], vecs2.shape[0]))
+        raise ValueError(
+            "Got inconsistent batch sizes {} and {}".format(
+                vecs1.shape[0], vecs2.shape[0]
+            )
+        )
 
-    return torch.bmm(vecs1.unsqueeze(dim=2),
-                     vecs2.unsqueeze(dim=2).transpose(2, 1)).squeeze_()
+    return torch.bmm(
+        vecs1.unsqueeze(dim=2), vecs2.unsqueeze(dim=2).transpose(2, 1)
+    ).squeeze_()
 
 
 def trace(mat):
@@ -44,6 +48,6 @@ def trace(mat):
         mat = mat.unsqueeze(dim=0)
 
     # Element-wise multiply by identity and take the sum
-    tr =  (torch.eye(mat.shape[1], dtype=mat.dtype) * mat).sum(dim=1).sum(dim=1)
-    
+    tr = (torch.eye(mat.shape[1], dtype=mat.dtype) * mat).sum(dim=1).sum(dim=1)
+
     return tr.view(mat.shape[0])

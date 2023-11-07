@@ -6,14 +6,15 @@ from . import utils
 
 class SO2Matrix(_base.SOMatrixBase):
     """See :mod:`liegroups.SO2`"""
+
     dim = 2
     dof = 1
 
     def adjoint(self):
         if self.mat.dim() < 3:
-            return self.mat.__class__([1.])
+            return self.mat.__class__([1.0])
         else:
-            return self.mat.__class__(self.mat.shape[0]).fill_(1.)
+            return self.mat.__class__(self.mat.shape[0]).fill_(1.0)
 
     @classmethod
     def exp(cls, phi):
@@ -45,13 +46,13 @@ class SO2Matrix(_base.SOMatrixBase):
         jac = phi.__class__(phi.shape[0], cls.dim, cls.dim)
 
         # Near phi==0, use first order Taylor expansion
-        small_angle_mask = utils.isclose(phi, 0.)
+        small_angle_mask = utils.isclose(phi, 0.0)
         small_angle_inds = small_angle_mask.nonzero(as_tuple=False).squeeze_(dim=1)
 
         if len(small_angle_inds) > 0:
             jac[small_angle_inds] = torch.eye(cls.dim).expand(
-                len(small_angle_inds), cls.dim, cls.dim) \
-                - 0.5 * cls.wedge(phi[small_angle_inds])
+                len(small_angle_inds), cls.dim, cls.dim
+            ) - 0.5 * cls.wedge(phi[small_angle_inds])
 
         # Otherwise...
         large_angle_mask = small_angle_mask.logical_not()
@@ -59,18 +60,16 @@ class SO2Matrix(_base.SOMatrixBase):
 
         if len(large_angle_inds) > 0:
             angle = phi[large_angle_inds]
-            ha = 0.5 * angle       # half angle
+            ha = 0.5 * angle  # half angle
             hacha = ha / ha.tan()  # half angle * cot(half angle)
 
-            ha.unsqueeze_(dim=1).unsqueeze_(
-                dim=2).expand_as(jac[large_angle_inds])
-            hacha.unsqueeze_(dim=1).unsqueeze_(
-                dim=2).expand_as(jac[large_angle_inds])
+            ha.unsqueeze_(dim=1).unsqueeze_(dim=2).expand_as(jac[large_angle_inds])
+            hacha.unsqueeze_(dim=1).unsqueeze_(dim=2).expand_as(jac[large_angle_inds])
 
-            A = hacha * \
-                torch.eye(cls.dim).unsqueeze_(
-                    dim=0).expand_as(jac[large_angle_inds])
-            B = -ha * cls.wedge(phi.__class__([1.]))
+            A = hacha * torch.eye(cls.dim).unsqueeze_(dim=0).expand_as(
+                jac[large_angle_inds]
+            )
+            B = -ha * cls.wedge(phi.__class__([1.0]))
 
             jac[large_angle_inds] = A + B
 
@@ -85,13 +84,13 @@ class SO2Matrix(_base.SOMatrixBase):
         jac = phi.__class__(phi.shape[0], cls.dim, cls.dim)
 
         # Near phi==0, use first order Taylor expansion
-        small_angle_mask = utils.isclose(phi, 0.)
+        small_angle_mask = utils.isclose(phi, 0.0)
         small_angle_inds = small_angle_mask.nonzero(as_tuple=False).squeeze_(dim=1)
 
         if len(small_angle_inds) > 0:
             jac[small_angle_inds] = torch.eye(cls.dim).expand(
-                len(small_angle_inds), cls.dim, cls.dim) \
-                + 0.5 * cls.wedge(phi[small_angle_inds])
+                len(small_angle_inds), cls.dim, cls.dim
+            ) + 0.5 * cls.wedge(phi[small_angle_inds])
 
         # Otherwise...
         large_angle_mask = small_angle_mask.logical_not()
@@ -102,13 +101,12 @@ class SO2Matrix(_base.SOMatrixBase):
             s = angle.sin()
             c = angle.cos()
 
-            A = (s / angle).unsqueeze_(dim=1).unsqueeze_(
-                dim=2).expand_as(jac[large_angle_inds]) * \
-                torch.eye(cls.dim).unsqueeze_(dim=0).expand_as(
-                jac[large_angle_inds])
-            B = ((1. - c) / angle).unsqueeze_(dim=1).unsqueeze_(
-                dim=2).expand_as(jac[large_angle_inds]) * \
-                cls.wedge(phi.__class__([1.]))
+            A = (s / angle).unsqueeze_(dim=1).unsqueeze_(dim=2).expand_as(
+                jac[large_angle_inds]
+            ) * torch.eye(cls.dim).unsqueeze_(dim=0).expand_as(jac[large_angle_inds])
+            B = ((1.0 - c) / angle).unsqueeze_(dim=1).unsqueeze_(dim=2).expand_as(
+                jac[large_angle_inds]
+            ) * cls.wedge(phi.__class__([1.0]))
 
             jac[large_angle_inds] = A + B
 
@@ -136,7 +134,10 @@ class SO2Matrix(_base.SOMatrixBase):
 
         if Phi.shape[1:3] != (cls.dim, cls.dim):
             raise ValueError(
-                "Phi must have shape ({},{}) or (N,{},{})".format(cls.dim, cls.dim, cls.dim, cls.dim))
+                "Phi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dim, cls.dim, cls.dim, cls.dim
+                )
+            )
 
         return Phi[:, 1, 0].squeeze_()
 
@@ -149,7 +150,8 @@ class SO2Matrix(_base.SOMatrixBase):
 
         if phi.shape[1] != cls.dof:
             raise ValueError(
-                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Phi = phi.new_zeros(phi.shape[0], cls.dim, cls.dim)
         Phi[:, 0, 1] = -phi[:, 0]

@@ -6,7 +6,8 @@ from .so3 import SO3Matrix
 
 
 class SE3Matrix(_base.SEMatrixBase):
-    """See :mod:`liegroups.SE3` """
+    """See :mod:`liegroups.SE3`"""
+
     dim = 4
     dof = 6
     RotationType = SO3Matrix
@@ -29,9 +30,13 @@ class SE3Matrix(_base.SEMatrixBase):
 
         zero_block = trans.new_empty(rot.shape).zero_()
 
-        return torch.cat([torch.cat([rot, trans_wedge_bmm_rot], dim=2),
-                          torch.cat([zero_block, rot], dim=2)], dim=1
-                         ).squeeze_()
+        return torch.cat(
+            [
+                torch.cat([rot, trans_wedge_bmm_rot], dim=2),
+                torch.cat([zero_block, rot], dim=2),
+            ],
+            dim=1,
+        ).squeeze_()
 
     @classmethod
     def curlyvee(cls, Psi):
@@ -39,8 +44,11 @@ class SE3Matrix(_base.SEMatrixBase):
             Psi = Psi.unsqueeze(dim=0)
 
         if Psi.shape[1:] != (cls.dof, cls.dof):
-            raise ValueError("Psi must have shape ({},{}) or (N,{},{})".format(
-                cls.dof, cls.dof, cls.dof, cls.dof))
+            raise ValueError(
+                "Psi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dof, cls.dof, cls.dof, cls.dof
+                )
+            )
 
         xi = Psi.new_empty(Psi.shape[0], cls.dof)
         xi[:, :3] = cls.RotationType.vee(Psi[:, :3, 3:])
@@ -55,7 +63,8 @@ class SE3Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Psi = xi.new_empty(xi.shape[0], cls.dof, cls.dof).zero_()
         Psi[:, :3, :3] = cls.RotationType.wedge(xi[:, 3:])
@@ -71,7 +80,8 @@ class SE3Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         rho = xi[:, :3]
         phi = xi[:, 3:]
@@ -95,7 +105,8 @@ class SE3Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         rho = xi[:, :3]  # translation part
         phi = xi[:, 3:]  # rotation part
@@ -119,7 +130,7 @@ class SE3Matrix(_base.SEMatrixBase):
 
         m1 = 0.5
         m2 = (ph - sph) / ph3
-        m3 = (0.5 * ph2 + cph - 1.) / ph4
+        m3 = (0.5 * ph2 + cph - 1.0) / ph4
         m4 = (ph - 1.5 * sph + 0.5 * ph * cph) / ph5
 
         m2 = m2.unsqueeze_(dim=1).unsqueeze_(dim=2).expand_as(rx)
@@ -128,7 +139,7 @@ class SE3Matrix(_base.SEMatrixBase):
 
         t1 = rx
         t2 = px.bmm(rx) + rx.bmm(px) + px.bmm(rx).bmm(px)
-        t3 = px.bmm(px).bmm(rx) + rx.bmm(px).bmm(px) - 3. * px.bmm(rx).bmm(px)
+        t3 = px.bmm(px).bmm(rx) + rx.bmm(px).bmm(px) - 3.0 * px.bmm(rx).bmm(px)
         t4 = px.bmm(rx).bmm(px).bmm(px) + px.bmm(px).bmm(rx).bmm(px)
 
         Q = m1 * t1 + m2 * t2 + m3 * t3 + m4 * t4
@@ -142,7 +153,8 @@ class SE3Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         rho = xi[:, :3]  # translation part
         phi = xi[:, 3:]  # rotation part
@@ -151,25 +163,23 @@ class SE3Matrix(_base.SEMatrixBase):
         angle = phi.norm(p=2, dim=1)
 
         # Near phi==0, use first order Taylor expansion
-        small_angle_mask = utils.isclose(angle, 0.)
+        small_angle_mask = utils.isclose(angle, 0.0)
         small_angle_inds = small_angle_mask.nonzero(as_tuple=False).squeeze_(dim=1)
         if len(small_angle_inds) > 0:
-
             # Create an identity matrix with a tensor type that matches the input
             I = phi.new_empty(cls.dof, cls.dof)
             torch.eye(cls.dof, out=I)
 
-            jac[small_angle_inds] = \
-                I.expand_as(jac[small_angle_inds]) - \
-                0.5 * cls.curlywedge(xi[small_angle_inds])
+            jac[small_angle_inds] = I.expand_as(
+                jac[small_angle_inds]
+            ) - 0.5 * cls.curlywedge(xi[small_angle_inds])
 
         # Otherwise...
         large_angle_mask = small_angle_mask.logical_not()
         large_angle_inds = large_angle_mask.nonzero(as_tuple=False).squeeze_(dim=1)
 
         if len(large_angle_inds) > 0:
-            so3_inv_jac = cls.RotationType.inv_left_jacobian(
-                phi[large_angle_inds])
+            so3_inv_jac = cls.RotationType.inv_left_jacobian(phi[large_angle_inds])
             if so3_inv_jac.dim() < 3:
                 so3_inv_jac.unsqueeze_(dim=0)
 
@@ -181,8 +191,12 @@ class SE3Matrix(_base.SEMatrixBase):
             inv_jac_Q_inv_jac = so3_inv_jac.bmm(Q_mat).bmm(so3_inv_jac)
 
             jac[large_angle_inds] = torch.cat(
-                [torch.cat([so3_inv_jac, -inv_jac_Q_inv_jac], dim=2),
-                 torch.cat([zero_block, so3_inv_jac], dim=2)], dim=1)
+                [
+                    torch.cat([so3_inv_jac, -inv_jac_Q_inv_jac], dim=2),
+                    torch.cat([zero_block, so3_inv_jac], dim=2),
+                ],
+                dim=1,
+            )
 
         return jac.squeeze_()
 
@@ -193,7 +207,8 @@ class SE3Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "xi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         rho = xi[:, :3]  # translation part
         phi = xi[:, 3:]  # rotation part
@@ -202,16 +217,16 @@ class SE3Matrix(_base.SEMatrixBase):
         angle = phi.norm(p=2, dim=1)
 
         # Near phi==0, use first order Taylor expansion
-        small_angle_mask = utils.isclose(angle, 0.)
+        small_angle_mask = utils.isclose(angle, 0.0)
         small_angle_inds = small_angle_mask.nonzero(as_tuple=False).squeeze_(dim=1)
         if len(small_angle_inds) > 0:
             # Create an identity matrix with a tensor type that matches the input
             I = phi.new_empty(cls.dof, cls.dof)
             torch.eye(cls.dof, out=I)
 
-            jac[small_angle_inds] = \
-                I.expand_as(jac[small_angle_inds]) + \
-                0.5 * cls.curlywedge(xi[small_angle_inds])
+            jac[small_angle_inds] = I.expand_as(
+                jac[small_angle_inds]
+            ) + 0.5 * cls.curlywedge(xi[small_angle_inds])
 
         # Otherwise...
         large_angle_mask = small_angle_mask.logical_not()
@@ -229,8 +244,12 @@ class SE3Matrix(_base.SEMatrixBase):
             zero_block = phi.new_empty(Q_mat.shape).zero_()
 
             jac[large_angle_inds] = torch.cat(
-                [torch.cat([so3_jac, Q_mat], dim=2),
-                 torch.cat([zero_block, so3_jac], dim=2)], dim=1)
+                [
+                    torch.cat([so3_jac, Q_mat], dim=2),
+                    torch.cat([zero_block, so3_jac], dim=2),
+                ],
+                dim=1,
+            )
 
         return jac.squeeze_()
 
@@ -268,24 +287,29 @@ class SE3Matrix(_base.SEMatrixBase):
             # Assume scale parameter is 1 unless p is a direction
             # vector, in which case the scale is 0
             if not directional:
-                result[:, :3, :3] = torch.eye(3, dtype=p.dtype).unsqueeze_(dim=0).expand(
-                    p.shape[0], 3, 3)
+                result[:, :3, :3] = (
+                    torch.eye(3, dtype=p.dtype)
+                    .unsqueeze_(dim=0)
+                    .expand(p.shape[0], 3, 3)
+                )
 
             result[:, :3, 3:] = cls.RotationType.wedge(-p)
 
         # Got homogeneous coordinates
         elif p.shape[1] == cls.dim:
-            result[:, :3, :3] = \
-                p[:, 3].unsqueeze_(dim=1).unsqueeze_(dim=2) * \
-                torch.eye(3, dtype=p.dtype).unsqueeze_(dim=0).repeat(
-                p.shape[0], 1, 1)
+            result[:, :3, :3] = p[:, 3].unsqueeze_(dim=1).unsqueeze_(dim=2) * torch.eye(
+                3, dtype=p.dtype
+            ).unsqueeze_(dim=0).repeat(p.shape[0], 1, 1)
 
             result[:, :3, 3:] = cls.RotationType.wedge(-p[:, :3])
 
         # Got wrong dimension
         else:
-            raise ValueError("p must have shape ({},), ({},), (N,{}) or (N,{})".format(
-                cls.dim - 1, cls.dim, cls.dim - 1, cls.dim))
+            raise ValueError(
+                "p must have shape ({},), ({},), (N,{}) or (N,{})".format(
+                    cls.dim - 1, cls.dim, cls.dim - 1, cls.dim
+                )
+            )
 
         return result.squeeze_()
 
@@ -295,8 +319,11 @@ class SE3Matrix(_base.SEMatrixBase):
             Xi = Xi.unsqueeze(dim=0)
 
         if Xi.shape[1:3] != (cls.dim, cls.dim):
-            raise ValueError("Xi must have shape ({},{}) or (N,{},{})".format(
-                cls.dim, cls.dim, cls.dim, cls.dim))
+            raise ValueError(
+                "Xi must have shape ({},{}) or (N,{},{})".format(
+                    cls.dim, cls.dim, cls.dim, cls.dim
+                )
+            )
 
         xi = Xi.new_empty(Xi.shape[0], cls.dof)
         xi[:, :3] = Xi[:, :3, 3]
@@ -311,7 +338,8 @@ class SE3Matrix(_base.SEMatrixBase):
 
         if xi.shape[1] != cls.dof:
             raise ValueError(
-                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof))
+                "phi must have shape ({},) or (N,{})".format(cls.dof, cls.dof)
+            )
 
         Xi = xi.new_empty(xi.shape[0], cls.dim, cls.dim).zero_()
         Xi[:, :3, :3] = cls.RotationType.wedge(xi[:, 3:])

@@ -325,8 +325,7 @@ class SO3Matrix(_base.SOMatrixBase):
         else:
             R = self.mat
 
-        trace = torch.clip(utils.trace(R), -1.0, 3.0)
-        qw = 0.5 * torch.sqrt(1.0 + trace)
+        qw = 0.5 * torch.sqrt(1.0 + utils.trace(R))
         qx = qw.new_empty(qw.shape)
         qy = qw.new_empty(qw.shape)
         qz = qw.new_empty(qw.shape)

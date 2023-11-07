@@ -27,40 +27,49 @@ class SOMatrixBase(_base.SOMatrixBase):
                 other = other.unsqueeze(dim=0)  # matrix --> batch
 
             if self.mat.dim() < 3:
+                # matrix --> batch
                 mat = self.mat.unsqueeze(dim=0).expand(
-                    other.shape[0], self.dim, self.dim)  # matrix --> batch
+                    other.shape[0], self.dim, self.dim
+                )
             else:
                 mat = self.mat
                 if other.shape[0] == 1:
-                    other = other.expand(
-                        mat.shape[0], other.shape[1], other.shape[2])
+                    other = other.expand(mat.shape[0], other.shape[1], other.shape[2])
 
             # Transform one or more vectors or fail
             if other.shape[0] != mat.shape[0]:
-                raise ValueError("Expected vector-batch batch size of {}, got {}".format(
-                    mat.shape[0], other.shape[0]))
+                raise ValueError(
+                    "Expected vector-batch batch size of {}, got {}".format(
+                        mat.shape[0], other.shape[0]
+                    )
+                )
 
             if other.shape[2] == self.dim:
                 return torch.bmm(mat, other.transpose(2, 1)).transpose_(2, 1).squeeze_()
             else:
                 raise ValueError(
-                    "Vector or vector-batch must have shape ({},), (N,{}), or ({},N,{})".format(self.dim, self.dim, mat.shape[0], self.dim))
+                    "Vector or vector-batch must have shape ({},), (N,{}), or ({},N,{})".format(
+                        self.dim, self.dim, mat.shape[0], self.dim
+                    )
+                )
 
     @classmethod
     def from_matrix(cls, mat, normalize=False):
-
         mat_is_valid = cls.is_valid_matrix(mat)
 
         if mat_is_valid.all() or normalize:
             result = cls(mat)
 
             if normalize:
-                result.normalize(inds=mat_is_valid.logical_not().nonzero(as_tuple=False))
+                result.normalize(
+                    inds=mat_is_valid.logical_not().nonzero(as_tuple=False)
+                )
 
             return result
         else:
             raise ValueError(
-                "Invalid rotation matrix. Use normalize=True to handle rounding errors.")
+                "Invalid rotation matrix. Use normalize=True to handle rounding errors."
+            )
 
     @classmethod
     def from_numpy(cls, other, pin_memory=False):
@@ -76,8 +85,7 @@ class SOMatrixBase(_base.SOMatrixBase):
         if copy:
             mat = torch.eye(cls.dim).repeat(batch_size, 1, 1)
         else:
-            mat = torch.eye(cls.dim).expand(
-                batch_size, cls.dim, cls.dim).squeeze()
+            mat = torch.eye(cls.dim).expand(batch_size, cls.dim, cls.dim).squeeze()
         return cls(mat)
 
     def inv(self):
@@ -111,13 +119,19 @@ class SOMatrixBase(_base.SOMatrixBase):
             shape_check.fill_(True)
 
         # Determinants of each matrix in the batch should be 1
-        det_check = utils.isclose(mat.__class__(
-            np.linalg.det(mat.detach().cpu().numpy())), 1.)
+        det_check = utils.isclose(
+            mat.__class__(np.linalg.det(mat.detach().cpu().numpy())), 1.0
+        )
 
         # The transpose of each matrix in the batch should be its inverse
-        inv_check = utils.isclose(mat.transpose(2, 1).bmm(mat),
-                                  torch.eye(cls.dim, dtype=mat.dtype)).sum(dim=1).sum(dim=1) \
+        inv_check = (
+            utils.isclose(
+                mat.transpose(2, 1).bmm(mat), torch.eye(cls.dim, dtype=mat.dtype)
+            )
+            .sum(dim=1)
+            .sum(dim=1)
             == cls.dim * cls.dim
+        )
 
         return shape_check & det_check & inv_check
 
@@ -185,12 +199,14 @@ class SEMatrixBase(_base.SEMatrixBase):
         t = t.unsqueeze(dim=2)  # N x self.dim-1 x 1
 
         bottom_row = self.trans.new_zeros(self.dim)
-        bottom_row[-1] = 1.
-        bottom_row = bottom_row.unsqueeze_(dim=0).unsqueeze_(
-            dim=1).expand(R.shape[0], 1, self.dim)
+        bottom_row[-1] = 1.0
+        bottom_row = (
+            bottom_row.unsqueeze_(dim=0)
+            .unsqueeze_(dim=1)
+            .expand(R.shape[0], 1, self.dim)
+        )
 
-        return torch.cat([torch.cat([R, t], dim=2),
-                          bottom_row], dim=1).squeeze_()
+        return torch.cat([torch.cat([R, t], dim=2), bottom_row], dim=1).squeeze_()
 
     def cpu(self):
         """Return a copy with the underlying tensors on the CPU."""
@@ -198,8 +214,10 @@ class SEMatrixBase(_base.SEMatrixBase):
 
     def cuda(self, device=None, non_blocking=False):
         """Return a copy with the underlying tensors on the GPU."""
-        return self.__class__(self.rot.cuda(device=device, non_blocking=non_blocking),
-                              self.trans.cuda(device=device, non_blocking=non_blocking))
+        return self.__class__(
+            self.rot.cuda(device=device, non_blocking=non_blocking),
+            self.trans.cuda(device=device, non_blocking=non_blocking),
+        )
 
     def dot(self, other):
         if isinstance(other, self.__class__):
@@ -211,8 +229,9 @@ class SEMatrixBase(_base.SEMatrixBase):
                 other_trans = other.trans.unsqueeze(dim=0)
 
             # Compound with another transformation
-            return self.__class__(self.rot.dot(other.rot),
-                                  self.rot.dot(other_trans) + self.trans)
+            return self.__class__(
+                self.rot.dot(other.rot), self.rot.dot(other_trans) + self.trans
+            )
         else:
             if other.dim() < 2:
                 other = other.unsqueeze(dim=0)  # vector --> matrix
@@ -233,23 +252,27 @@ class SEMatrixBase(_base.SEMatrixBase):
                 if rot.dim() < 3:
                     # matrix --> batch
                     rot = rot.unsqueeze(dim=0).expand(
-                        other.shape[0], rot.shape[0], rot.shape[1])
+                        other.shape[0], rot.shape[0], rot.shape[1]
+                    )
                     # matrix --> batch
-                    trans = trans.expand(
-                        other.shape[0], trans.shape[1], trans.shape[2])
+                    trans = trans.expand(other.shape[0], trans.shape[1], trans.shape[2])
                 elif other.shape[0] == 1:
-                    other = other.expand(
-                        rot.shape[0], other.shape[1], other.shape[2])
+                    other = other.expand(rot.shape[0], other.shape[1], other.shape[2])
 
                 # Transform one or more vectors or fail
                 if other.shape[0] != rot.shape[0]:
                     raise ValueError(
-                        "Expected vector-batch batch size of {}, got {}".format(rot.shape[0], other.shape[0]))
+                        "Expected vector-batch batch size of {}, got {}".format(
+                            rot.shape[0], other.shape[0]
+                        )
+                    )
 
                 # rot * other + trans
-                return torch.baddbmm(trans.transpose(2, 1), rot,
-                                     other.transpose(2, 1)
-                                     ).transpose(2, 1).squeeze_()
+                return (
+                    torch.baddbmm(trans.transpose(2, 1), rot, other.transpose(2, 1))
+                    .transpose(2, 1)
+                    .squeeze_()
+                )
 
             # Got homogeneous coordinates
             elif other.shape[2] == self.dim:
@@ -257,17 +280,19 @@ class SEMatrixBase(_base.SEMatrixBase):
 
                 if mat.dim() < 3:
                     mat = mat.unsqueeze(dim=0).expand(
-                        other.shape[0], self.dim, self.dim)  # matrix --> batch
+                        other.shape[0], self.dim, self.dim
+                    )  # matrix --> batch
                 elif other.shape[0] == 1:
-                    other = other.expand(
-                        mat.shape[0], other.shape[1], other.shape[2])
+                    other = other.expand(mat.shape[0], other.shape[1], other.shape[2])
 
                 if other.shape[0] != mat.shape[0]:
                     raise ValueError(
-                        "Expected vector-batch batch size of {}, got {}".format(mat.shape[0], other.shape[0]))
+                        "Expected vector-batch batch size of {}, got {}".format(
+                            mat.shape[0], other.shape[0]
+                        )
+                    )
 
-                return torch.bmm(mat, other.transpose(2, 1)
-                                 ).transpose(2, 1).squeeze_()
+                return torch.bmm(mat, other.transpose(2, 1)).transpose(2, 1).squeeze_()
 
             # Got wrong dimension
             else:
@@ -277,7 +302,17 @@ class SEMatrixBase(_base.SEMatrixBase):
                     batch_size = self.trans.shape[0]
 
                 raise ValueError(
-                    "Vector or vector-batch must have shape ({},), ({},), (N,{}), (N,{}), ({},N,{}), or ({},N,{})".format(self.dim - 1, self.dim, self.dim - 1, self.dim, batch_size, self.dim - 1, batch_size, self.dim))
+                    "Vector or vector-batch must have shape ({},), ({},), (N,{}), (N,{}), ({},N,{}), or ({},N,{})".format(
+                        self.dim - 1,
+                        self.dim,
+                        self.dim - 1,
+                        self.dim,
+                        batch_size,
+                        self.dim - 1,
+                        batch_size,
+                        self.dim,
+                    )
+                )
 
     @classmethod
     def from_matrix(cls, mat, normalize=False):
@@ -287,17 +322,20 @@ class SEMatrixBase(_base.SEMatrixBase):
         mat_is_valid = cls.is_valid_matrix(mat)
 
         if mat_is_valid.all() or normalize:
-            rot = mat[:, 0:cls.dim - 1, 0:cls.dim - 1].squeeze()
-            trans = mat[:, 0:cls.dim - 1, cls.dim - 1].squeeze()
+            rot = mat[:, 0 : cls.dim - 1, 0 : cls.dim - 1].squeeze()
+            trans = mat[:, 0 : cls.dim - 1, cls.dim - 1].squeeze()
             result = cls(cls.RotationType(rot), trans)
 
             if normalize:
-                result.normalize(inds=mat_is_valid.logical_not().nonzero(as_tuple=False))
+                result.normalize(
+                    inds=mat_is_valid.logical_not().nonzero(as_tuple=False)
+                )
 
             return result
         else:
             raise ValueError(
-                "Invalid transformation matrix. Use normalize=True to handle rounding errors.")
+                "Invalid transformation matrix. Use normalize=True to handle rounding errors."
+            )
 
     @classmethod
     def from_numpy(cls, other, pin_memory=False):
@@ -357,13 +395,16 @@ class SEMatrixBase(_base.SEMatrixBase):
 
         # Bottom row should be [zeros, 1]
         bottom_row = mat.new_zeros(cls.dim)
-        bottom_row[-1] = 1.
-        bottom_check = (mat[:, cls.dim - 1, :] == bottom_row.unsqueeze_(
-            dim=0).expand(mat.shape[0], cls.dim)).sum(dim=1) == cls.dim
+        bottom_row[-1] = 1.0
+        bottom_check = (
+            mat[:, cls.dim - 1, :]
+            == bottom_row.unsqueeze_(dim=0).expand(mat.shape[0], cls.dim)
+        ).sum(dim=1) == cls.dim
 
         # Check that the rotation part is valid
         rot_check = cls.RotationType.is_valid_matrix(
-            mat[:, 0:cls.dim - 1, 0:cls.dim - 1])
+            mat[:, 0 : cls.dim - 1, 0 : cls.dim - 1]
+        )
 
         return shape_check & bottom_check & rot_check
 
@@ -380,4 +421,5 @@ class SEMatrixBase(_base.SEMatrixBase):
 
 class VectorLieGroupBase(_base.VectorLieGroupBase):
     """Implementation of methods common to vector-parametrized lie groups using PyTorch"""
+
     pass
